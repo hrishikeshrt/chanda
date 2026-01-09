@@ -1,0 +1,111 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chanda"
+version = "0.1.0"
+description = "Sanskrit meter identification and analysis library"
+readme = "README.md"
+authors = [
+    {name = "Hrishikesh Terdalkar", email = "hrishikeshrt@proton.me"}
+]
+license = {text = "AGPL-3.0-or-later"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing :: Linguistic",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = [
+    "sanskrit",
+    "prosody",
+    "meter",
+    "chanda",
+    "poetry",
+    "linguistics",
+    "nlp",
+    "digital-humanities"
+]
+requires-python = ">=3.8"
+dependencies = [
+    "python-Levenshtein>=0.12.2",
+    "indic-transliteration>=2.3.10",
+    "sanskrit-text>=0.2.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=3.0",
+    "black>=22.0",
+    "flake8>=4.0",
+    "mypy>=0.950",
+]
+docs = [
+    "sphinx>=4.0",
+    "sphinx-rtd-theme>=1.0",
+    "sphinx-autodoc-typehints>=1.18",
+]
+webapp = [
+    "Flask>=2.2.2",
+    "Flask-Uploads>=0.2.1",
+    "pytesseract>=0.3.9",
+    "google-drive-ocr>=0.2.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/hrishikeshrt/chanda"
+Documentation = "https://chanda.readthedocs.io"
+Repository = "https://github.com/hrishikeshrt/chanda"
+"Bug Tracker" = "https://github.com/hrishikeshrt/chanda/issues"
+
+[project.scripts]
+chanda = "chanda.cli:main"
+
+[tool.setuptools]
+packages = ["chanda"]
+
+[tool.setuptools.package-data]
+chanda = ["data/*.csv", "data/*.json"]
+
+[tool.black]
+line-length = 88
+target-version = ['py37', 'py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
