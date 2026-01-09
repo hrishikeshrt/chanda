@@ -55,7 +55,7 @@ def identify_meter(
             - display_* : Formatted display versions
 
     Example:
-        >>> result = identify_meter("इक्ष्वाकुवंशप्रभवो रामो नाम जनैः श्रुतः")
+        >>> result = identify_meter("को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्")
         >>> print(result['display_chanda'])
         'Anuṣṭup (पाद 1)'
         >>> print(result['display_gana'])
@@ -102,8 +102,8 @@ def analyze_text(
             - path: Dict with 'json' and 'txt' file paths (if saved)
 
     Example:
-        >>> text = '''इक्ष्वाकुवंशप्रभवो रामो नाम जनैः श्रुतः।
-        ... मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥'''
+        >>> text = '''को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्।
+        ... धर्मज्ञश्च कृतज्ञश्च सत्यवाक्यो दृढव्रतः॥'''
         >>> results = analyze_text(text, verse_mode=True)
         >>> for line in results['result']['line']:
         ...     print(line['result']['display_chanda'])
@@ -133,9 +133,9 @@ def format_result(result: Dict[str, Any]) -> str:
         str: Formatted multi-line string representation
 
     Example:
-        >>> result = identify_meter("इक्ष्वाकुवंशप्रभवो रामो नाम जनैः श्रुतः")
+        >>> result = identify_meter("को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्")
         >>> print(format_result(result))
-        इक्ष्वाकुवंशप्रभवो रामो नाम जनैः श्रुतः
+        को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्
             Syllables: ['धर्', 'म', 'क्षे', 'त्रे', 'कु', 'रु', 'क्षे', 'त्रे', ...]
             LG: ['ग', 'ल', 'ग', 'ग', 'ल', 'ग', 'ल', 'ग']
             Gana: नभजलगलग

@@ -96,7 +96,7 @@ publish: dist
 
 # Quick test of the CLI
 test-cli:
-	chanda "इक्ष्वाकुवंशप्रभवो रामो नाम जनैः श्रुतः"
+	chanda "को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्"
 
 # Run all checks before committing
 check: format-check lint test

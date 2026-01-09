@@ -6,7 +6,7 @@ A comprehensive Python library for identifying and analyzing Sanskrit poetic met
 
 Basic Usage:
     >>> from chanda import identify_meter
-    >>> result = identify_meter("इक्ष्वाकुवंशप्रभवो रामो नाम जनैः श्रुतः")
+    >>> result = identify_meter("को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्")
     >>> print(result['display_chanda'])
     'Anuṣṭup'
 

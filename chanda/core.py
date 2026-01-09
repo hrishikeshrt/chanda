@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jan 22 22:23:37 2021
+Core module for Sanskrit meter identification and analysis.
 
 @author: Hrishikesh Terdalkar
+
+Created on Fri Jan 22 22:23:37 2021
 """
 
 ###############################################################################
@@ -14,6 +16,7 @@ import csv
 import json
 import hashlib
 import functools
+from enum import Enum
 from typing import Tuple, List, Dict, Optional, Any
 
 from collections import defaultdict, Counter
@@ -26,35 +29,95 @@ from indic_transliteration.sanscript import transliterate
 
 import sanskrit_text as skt
 
-# size of LRU cache
-MAX_CACHE = 1024
+# Constants
+MAX_CACHE = 1024  # Size of LRU cache
+DEFAULT_VERSE_LINES = 4  # Number of lines per verse (ślokas)
 
 ###############################################################################
 
 
+class SyllableWeight(str, Enum):
+    """
+    Syllable weight in Sanskrit prosody.
+
+    Laghu (L): Light/short syllable - 1 mātrā
+    Guru (G): Heavy/long syllable - 2 mātrā
+    """
+    L = 'L'  # Laghu (light)
+    G = 'G'  # Guru (heavy)
+
+
+class GanaSymbol(str, Enum):
+    """
+    Gaṇa symbols used in Sanskrit prosody.
+
+    Each gaṇa represents a three-syllable pattern of laghu and guru.
+    The eight gaṇas are: ya, ra, ta, na, bha, ja, sa, ma.
+    """
+    Y = 'Y'  # ya-gaṇa: L-G-G (त्रिकलं द्विगुरु)
+    R = 'R'  # ra-gaṇa: G-L-G (मध्ये लघु)
+    T = 'T'  # ta-gaṇa: G-G-L (गुरुद्वयं लघु)
+    N = 'N'  # na-gaṇa: L-L-L (त्रिलघु)
+    B = 'B'  # bha-gaṇa: G-L-L (आदिगुरु)
+    J = 'J'  # ja-gaṇa: L-G-L (मध्ये गुरु)
+    S = 'S'  # sa-gaṇa: L-L-G (लघुद्वयं गुरु)
+    M = 'M'  # ma-gaṇa: G-G-G (त्रिगुरु)
+
+
+class SanskritTextProcessor:
+    """Helper class for Sanskrit text processing operations."""
+
+    @staticmethod
+    @functools.lru_cache(maxsize=MAX_CACHE)
+    def process_and_detect_scheme(text: str) -> Tuple[List[str], str]:
+        """
+        Process input text and detect transliteration scheme.
+
+        Args:
+            text: Input Sanskrit text in any supported scheme
+
+        Returns:
+            Tuple of (cleaned lines, detected scheme)
+        """
+        scheme = detect(text)
+        if scheme != sanscript.DEVANAGARI:
+            devanagari_text = transliterate(text, scheme, sanscript.DEVANAGARI)
+        else:
+            devanagari_text = text
+
+        lines = []
+        for line in skt.split_lines(devanagari_text):
+            clean_line = skt.clean(line).strip()
+            if clean_line:
+                lines.append(clean_line)
+        return lines, scheme
+
+
 class Chanda:
-    """Chanda Identifier"""
-    Y = 'Y'
-    R = 'R'
-    T = 'T'
-    N = 'N'
-    B = 'B'
-    J = 'J'
-    S = 'S'
-    M = 'M'
-    L = 'L'
-    G = 'G'
-    SYMBOLS = f'{Y}{R}{T}{N}{B}{J}{S}{M}{L}{G}'
-    GANA = {
-        Y: f'{L}{G}{G}',
-        R: f'{G}{L}{G}',
-        T: f'{G}{G}{L}',
-        N: f'{L}{L}{L}',
-        B: f'{G}{L}{L}',
-        J: f'{L}{G}{L}',
-        S: f'{L}{L}{G}',
-        M: f'{G}{G}{G}'
+    """
+    Chanda (Sanskrit Meter) Identifier.
+
+    This class provides comprehensive meter identification and analysis for Sanskrit poetry,
+    supporting Sama-vṛtta, Ardhasama-vṛtta, Viṣama-vṛtta, and Mātrā-vṛtta meters.
+    """
+
+    # Build gaṇa pattern mappings
+    GANA_PATTERNS = {
+        GanaSymbol.Y.value: f'{SyllableWeight.L.value}{SyllableWeight.G.value}{SyllableWeight.G.value}',
+        GanaSymbol.R.value: f'{SyllableWeight.G.value}{SyllableWeight.L.value}{SyllableWeight.G.value}',
+        GanaSymbol.T.value: f'{SyllableWeight.G.value}{SyllableWeight.G.value}{SyllableWeight.L.value}',
+        GanaSymbol.N.value: f'{SyllableWeight.L.value}{SyllableWeight.L.value}{SyllableWeight.L.value}',
+        GanaSymbol.B.value: f'{SyllableWeight.G.value}{SyllableWeight.L.value}{SyllableWeight.L.value}',
+        GanaSymbol.J.value: f'{SyllableWeight.L.value}{SyllableWeight.G.value}{SyllableWeight.L.value}',
+        GanaSymbol.S.value: f'{SyllableWeight.L.value}{SyllableWeight.L.value}{SyllableWeight.G.value}',
+        GanaSymbol.M.value: f'{SyllableWeight.G.value}{SyllableWeight.G.value}{SyllableWeight.G.value}'
     }
+
+    # Convenience constants for internal use
+    L = SyllableWeight.L.value
+    G = SyllableWeight.G.value
+    SYMBOLS = ''.join(s.value for s in GanaSymbol) + L + G
+    GANA = GANA_PATTERNS
 
     def __init__(self, data_path, symbols='यरतनभजसमलग'):
         self.input_map = dict(zip(symbols, self.SYMBOLS))
@@ -311,7 +374,7 @@ class Chanda:
 
     def process_text(self, text: str) -> Tuple[List[str], str]:
         """
-        Process input text and detect transliteration scheme
+        Process input text and detect transliteration scheme.
 
         Args:
             text: Input Sanskrit text in any supported scheme
@@ -319,17 +382,7 @@ class Chanda:
         Returns:
             Tuple of (cleaned lines, detected scheme)
         """
-        scheme = detect(text)
-        if scheme != sanscript.DEVANAGARI:
-            devanagari_text = transliterate(text, scheme, sanscript.DEVANAGARI)
-        else:
-            devanagari_text = text
-        lines = []
-        for line in skt.split_lines(devanagari_text):
-            clean_line = skt.clean(line).strip()
-            if clean_line:
-                lines.append(clean_line)
-        return lines, scheme
+        return SanskritTextProcessor.process_and_detect_scheme(text)
 
     ###########################################################################
 
@@ -531,14 +584,26 @@ class Chanda:
     ###########################################################################
 
     def identify_from_text(
-        self, text, verse=False, fuzzy=False, save_path=None, scheme=None
+        self, text, verse=False, fuzzy=False, save_path=None, scheme=None,
+        verse_lines=DEFAULT_VERSE_LINES
     ):
         """
-        Identify meters from text
+        Identify meters from text.
 
-        If `verse` is True, treat the input as collection of verses.
-        NOTE: Currently assumes 4 lines per verse.
-        TODO: Add support for 2 lines per verse too. (i.e. 2 pada in same line)
+        Args:
+            text: Input Sanskrit text
+            verse: If True, treat input as collection of verses
+            fuzzy: Enable fuzzy matching
+            save_path: Path to save results (JSON and text files)
+            scheme: Output transliteration scheme
+            verse_lines: Number of lines per verse (default: 4 for ślokas)
+
+        Returns:
+            Dictionary containing identification results and file paths
+
+        Note:
+            Currently supports 4-line verses (ślokas). Future support planned
+            for 2-line verses (i.e., 2 pādas in same line).
         """
         line_results = []
         verse_results = []
@@ -590,7 +655,7 @@ class Chanda:
 
                 verse_result['lines'].append(line_idx)
                 line_count += 1
-                if line_count % 4 == 0 or line_idx == len(line_results) - 1:
+                if line_count % verse_lines == 0 or line_idx == len(line_results) - 1:
                     if len(verse_matra_counts) >= 2:
                         matra_tuple = tuple(verse_matra_counts)
                         matra_match = self.find_matra_match(matra_tuple)

@@ -70,7 +70,7 @@ Python API
    from chanda import identify_meter
 
    # Identify meter from a single line
-   text = "इक्ष्वाकुवंशप्रभवो रामो नाम जनैः श्रुतः"
+   text = "को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्"
    result = identify_meter(text)
 
    print(result['display_chanda'])  # Output: Anuṣṭup (पाद 1)
@@ -83,7 +83,7 @@ Command-Line Interface
 .. code-block:: bash
 
    # Analyze a single line
-   chanda "इक्ष्वाकुवंशप्रभवो रामो नाम जनैः श्रुतः"
+   chanda "को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्"
 
    # Analyze a file
    chanda -f bhagavad_gita.txt --verse --summary

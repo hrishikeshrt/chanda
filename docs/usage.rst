@@ -35,8 +35,8 @@ Verse Analysis
 
    from chanda import analyze_text
 
-   verse = """इक्ष्वाकुवंशप्रभवो रामो नाम जनैः श्रुतः।
-   मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥"""
+   verse = """को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्।
+   धर्मज्ञश्च कृतज्ञश्च सत्यवाक्यो दृढव्रतः॥"""
 
    results = analyze_text(verse, verse_mode=True, fuzzy=True)
 
@@ -55,7 +55,7 @@ Analyze a single line:
 
 .. code-block:: bash
 
-   chanda "इक्ष्वाकुवंशप्रभवो रामो नाम जनैः श्रुतः"
+   chanda "को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्"
 
 Analyze a file:
 
@@ -180,7 +180,7 @@ Example 1: Identify Anuṣṭup
 
    from chanda import identify_meter
 
-   line = "इक्ष्वाकुवंशप्रभवो रामो नाम जनैः श्रुतः"
+   line = "को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्"
    result = identify_meter(line)
 
    print(result['display_chanda'])  # Anuṣṭup (पाद 1)

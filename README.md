@@ -2,7 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/chanda.svg)](https://badge.fury.io/py/chanda)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 **Sanskrit Meter Identification and Analysis Library**
 
@@ -62,20 +62,23 @@ pip install -e .
 ```python
 from chanda import identify_meter
 
-# Identify meter from a single line
-text = "इक्ष्वाकुवंशप्रभवो रामो नाम जनैः श्रुतः"
+# Simple example - Anuṣṭubh (most common meter)
+text = "को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्"
 result = identify_meter(text)
+print(result['display_chanda'])  # Output: अनुष्टुभ् (पाद 1-2)
 
-print(result['display_chanda'])  # Output: Anuṣṭup (पाद 1)
-print(result['display_gana'])    # Output: नभजलगलग
-print(result['matra'])           # Output: 32
+# Gana-based meter example - shows gana pattern
+text = "नमस्ते सदा वत्सले मातृभूमे"
+result = identify_meter(text)
+print(result['display_chanda'])  # Output: भुजङ्गप्रयात
+print(result['gana'])            # Output: यययय
 ```
 
 ### Command-Line Interface
 
 ```bash
 # Analyze a single line
-chanda "इक्ष्वाकुवंशप्रभवो रामो नाम जनैः श्रुतः"
+chanda "को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्"
 
 # Analyze a file
 chanda -f bhagavad_gita.txt --verse --summary
@@ -119,8 +122,8 @@ else:
 ```python
 from chanda import analyze_text
 
-verse = """इक्ष्वाकुवंशप्रभवो रामो नाम जनैः श्रुतः।
-मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥"""
+verse = """को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्।
+धर्मज्ञश्च कृतज्ञश्च सत्यवाक्यो दृढव्रतः॥"""
 
 results = analyze_text(verse, verse_mode=True, fuzzy=True)
 
@@ -138,49 +141,6 @@ Full documentation is available at [chanda.readthedocs.io](https://chanda.readth
 
 ---
 
-## Project Structure
-
-```
-chanda/
-├── chanda/               # Main package
-│   ├── __init__.py       # Public API
-│   ├── core.py           # Core Chanda class
-│   ├── utils.py          # Utility functions
-│   ├── cli.py            # Command-line interface
-│   ├── exceptions.py     # Custom exceptions
-│   └── data/             # Meter definitions (CSV files)
-├── examples/             # Usage examples
-├── docs/                 # Sphinx documentation
-├── pyproject.toml        # Package configuration
-├── setup.py              # Setup script
-├── Makefile              # Build and test automation
-└── README.md             # This file
-```
-
----
-
-## Supported Meters
-
-### Sama-vṛtta (348 meters)
-Anuṣṭup, Indravajrā, Upendravajrā, Vasantatilakā, Mālinī, Śārdūlavikrīḍita, and 340+ more
-
-### Ardhasama/Viṣama-vṛtta (52 meters)
-Aparavaktra, Upacitra, Viyoginī, and 49+ more
-
-### Mātrā-vṛtta (10 meters)
-Āryā, Āryāgīti, Udgīti, Upagīti, Gīti, and 5+ more
-
----
-
-## Web Interface
-
-A web interface built with Flask is available separately at:
-https://github.com/hrishikeshrt/chanda
-
-Live demo: https://sanskrit.iitk.ac.in/jnanasangraha/chanda/
-
----
-
 ## Contributing
 
 Contributions are welcome! Please:
@@ -195,14 +155,20 @@ Contributions are welcome! Please:
 
 ## Citation
 
-If you use Chanda in your research, please cite:
+If you use Chandojñānam in your research, please cite:
 
 ```bibtex
-@software{chanda2025,
-  title = {Chanda: Sanskrit Meter Identification Library},
-  author = {Terdalkar, Hrishikesh},
-  year = {2025},
-  url = {https://github.com/hrishikeshrt/chanda}
+@inproceedings{terdalkar2023chandojnanam,
+    title = "Chandojnanam: A {S}anskrit Meter Identification and Utilization System",
+    author = "Terdalkar, Hrishikesh  and
+      Bhattacharya, Arnab",
+    booktitle = "Proceedings of the Computational {S}anskrit {\&} Digital Humanities: Selected papers presented at the 18th World {S}anskrit Conference",
+    month = jan,
+    year = "2023",
+    address = "Canberra, Australia (Online mode)",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.wsc-csdh.8",
+    pages = "113--127",
 }
 ```
 
@@ -210,7 +176,7 @@ If you use Chanda in your research, please cite:
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+GNU Affero General Public License v3.0 - see [LICENSE](LICENSE) file for details.
 
 ---
 
