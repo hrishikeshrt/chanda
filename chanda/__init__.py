@@ -28,7 +28,7 @@ Author: Hrishikesh Terdalkar
 License: AGPL-3.0-or-later
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __author__ = "Hrishikesh Terdalkar"
 
 from .core import Chanda

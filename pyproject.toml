@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chanda"
-version = "0.1.0"
+version = "0.1.1"
 description = "Sanskrit meter identification and analysis library"
 readme = "README.md"
 authors = [
