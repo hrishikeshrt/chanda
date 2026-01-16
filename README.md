@@ -60,19 +60,24 @@ pip install -e .
 ### Python API
 
 ```python
-from chanda import identify_meter
+from chanda import analyze_line
 
 # Simple example - Anuṣṭubh (most common meter)
 text = "को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्"
-result = identify_meter(text)
-print(result['display_chanda'])  # Output: अनुष्टुभ् (पाद 1-2)
+result = analyze_line(text)
+meters = [name for name, _ in result.chanda]
+print(meters)  # Output: ['अनुष्टुभ्']
 
 # Gana-based meter example - shows gana pattern
 text = "नमस्ते सदा वत्सले मातृभूमे"
-result = identify_meter(text)
-print(result['display_chanda'])  # Output: भुजङ्गप्रयात
-print(result['gana'])            # Output: यययय
+result = analyze_line(text)
+meters = [name for name, _ in result.chanda]
+print(meters)  # Output: ['भुजङ्गप्रयात']
+print(result.gana)            # Output: यययय
 ```
+
+Results are objects (`ChandaResult` / `TextAnalysisResult`).
+Use `result.to_dict()` or `result.to_json()` for serialization.
 
 ### Command-Line Interface
 
@@ -97,23 +102,24 @@ chanda --help
 ### Single Line Analysis
 
 ```python
-from chanda import identify_meter
+from chanda import analyze_line
 
 text = "रामो राजमणिः सदा विजयते रामं रमेशं भजे"
-result = identify_meter(text, fuzzy=True)
+result = analyze_line(text, fuzzy=True)
 
-if result['found']:
-    print(f"Meter: {result['display_chanda']}")
-    print(f"Syllables: {result['syllables']}")
-    print(f"Pattern (LG): {' '.join(result['lg'])}")
-    print(f"Gana: {result['gana']}")
-    print(f"Syllable count: {result['length']}")
-    print(f"Mātrā count: {result['matra']}")
+if result.found:
+    print(f"Meter(s): {[name for name, _ in result.chanda]}")
+    print(f"Syllables: {result.syllables}")
+    print(f"Pattern (LG): {' '.join(result.lg)}")
+    print(f"Gana: {result.gana}")
+    print(f"Syllable count: {result.length}")
+    print(f"Mātrā count: {result.matra}")
 else:
     # Check fuzzy matches
-    if result['fuzzy']:
-        best_match = result['fuzzy'][0]
-        print(f"Closest meter: {best_match['display_chanda']}")
+    if result.fuzzy:
+        best_match = result.fuzzy[0]
+        from chanda import format_chanda_list
+        print(f"Closest meter: {format_chanda_list(best_match['chanda'])}")
         print(f"Similarity: {best_match['similarity']:.2%}")
 ```
 
@@ -128,8 +134,10 @@ verse = """को न्वस्मिन् साम्प्रतं लो
 results = analyze_text(verse, verse_mode=True, fuzzy=True)
 
 # Access verse-level results
-for verse in results['result']['verse']:
-    best_meters, score = verse['chanda']
+for verse in results.result.verse:
+    if not verse.chanda:
+        continue
+    best_meters, score = verse.chanda
     print(f"Verse meter: {' / '.join(best_meters)} (score: {score})")
 ```
 

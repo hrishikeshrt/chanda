@@ -82,7 +82,7 @@ Test basic functionality:
 
 .. code-block:: python
 
-   python -c "from chanda import identify_meter; print(identify_meter('धर्मक्षेत्रे कुरुक्षेत्रे')['display_chanda'])"
+   python -c "from chanda import analyze_line; print([n for n,_ in analyze_line('धर्मक्षेत्रे कुरुक्षेत्रे').chanda])"
 
 Troubleshooting
 ---------------

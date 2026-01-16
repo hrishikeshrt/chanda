@@ -9,23 +9,24 @@ Single Line Analysis
 
 .. code-block:: python
 
-   from chanda import identify_meter
+   from chanda import analyze_line
 
    text = "रामो राजमणिः सदा विजयते रामं रमेशं भजे"
-   result = identify_meter(text, fuzzy=True)
+   result = analyze_line(text, fuzzy=True)
 
-   if result['found']:
-       print(f"Meter: {result['display_chanda']}")
-       print(f"Syllables: {result['syllables']}")
-       print(f"Pattern (LG): {' '.join(result['lg'])}")
-       print(f"Gana: {result['gana']}")
-       print(f"Syllable count: {result['length']}")
-       print(f"Mātrā count: {result['matra']}")
+   if result.found:
+       print(f"Meter(s): {[name for name, _ in result.chanda]}")
+       print(f"Syllables: {result.syllables}")
+       print(f"Pattern (LG): {' '.join(result.lg)}")
+       print(f"Gana: {result.gana}")
+       print(f"Syllable count: {result.length}")
+       print(f"Mātrā count: {result.matra}")
    else:
        # Check fuzzy matches
-       if result['fuzzy']:
-           best_match = result['fuzzy'][0]
-           print(f"Closest meter: {best_match['display_chanda']}")
+       if result.fuzzy:
+           best_match = result.fuzzy[0]
+           from chanda import format_chanda_list
+           print(f"Closest meter: {format_chanda_list(best_match['chanda'])}")
            print(f"Similarity: {best_match['similarity']:.2%}")
 
 Verse Analysis
@@ -41,8 +42,8 @@ Verse Analysis
    results = analyze_text(verse, verse_mode=True, fuzzy=True)
 
    # Access verse-level results
-   for verse in results['result']['verse']:
-       best_meters, score = verse['chanda']
+   for verse in results.result.verse:
+       best_meters, score = verse.chanda
        print(f"Verse meter: {' / '.join(best_meters)} (score: {score})")
 
 Command-Line Interface
@@ -115,22 +116,22 @@ Chanda automatically detects and supports multiple transliteration schemes:
 
 .. code-block:: python
 
-   from chanda import identify_meter
+   from chanda import analyze_line
 
    # Devanagari
-   result = identify_meter("धर्मक्षेत्रे कुरुक्षेत्रे")
+   result = analyze_line("धर्मक्षेत्रे कुरुक्षेत्रे")
 
    # IAST
-   result = identify_meter("dharmakṣetre kurukṣetre")
+   result = analyze_line("dharmakṣetre kurukṣetre")
 
    # ITRANS
-   result = identify_meter("dharmakShetre kurukShetre")
+   result = analyze_line("dharmakShetre kurukShetre")
 
    # Harvard-Kyoto
-   result = identify_meter("dharmakSetre kurukSetre")
+   result = analyze_line("dharmakSetre kurukSetre")
 
    # SLP1
-   result = identify_meter("Darmakzetre kurukzetre")
+   result = analyze_line("Darmakzetre kurukzetre")
 
 Supported Meters
 ----------------
@@ -148,15 +149,22 @@ Meters with identical padas:
 * Śārdūlavikrīḍita
 * And 340+ more
 
-Ardhasama/Viṣama-vṛtta (52 meters)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Ardhasama-vṛtta
+~~~~~~~~~~~~~~~~
 
-Meters with varying padas:
+Meters with alternating padas:
 
 * Aparavaktra
 * Upacitra
+* And more
+
+Viṣama-vṛtta
+~~~~~~~~~~~~
+
+Meters with uneven padas:
+
 * Viyoginī
-* And 49+ more
+* And more
 
 Mātrā-vṛtta (10 meters)
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -178,28 +186,29 @@ Example 1: Identify Anuṣṭup
 
 .. code-block:: python
 
-   from chanda import identify_meter
+   from chanda import analyze_line
 
    line = "को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्"
-   result = identify_meter(line)
+   result = analyze_line(line)
 
-   print(result['display_chanda'])  # Anuṣṭup (पाद 1)
-   print(result['display_gana'])    # नभजलगलग
+   print([name for name, _ in result.chanda])  # ['अनुष्टुभ्']
+   print(result.gana)    # नभजलगलग
 
 Example 2: Fuzzy Matching
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
-   from chanda import identify_meter
+   from chanda import analyze_line
 
    # Slightly incorrect meter
    line = "रामं राजमणिः सदा विजयते"
-   result = identify_meter(line, fuzzy=True, k=5)
+   result = analyze_line(line, fuzzy=True, k=5)
 
-   if not result['found'] and result['fuzzy']:
-       for match in result['fuzzy'][:3]:
-           print(f"{match['display_chanda']}: {match['similarity']:.1%}")
+   if not result.found and result.fuzzy:
+       for match in result.fuzzy[:3]:
+           from chanda import format_chanda_list
+           print(f"{format_chanda_list(match['chanda'])}: {match['similarity']:.1%}")
            print(f"  Suggestion: {match['suggestion']}")
 
 Example 3: Batch Processing
@@ -219,5 +228,5 @@ Example 3: Batch Processing
    from chanda.utils import get_default_data_path
 
    c = Chanda(get_default_data_path())
-   summary = c.summarize_results(results['result'])
+   summary = c.summarize_results(results.result.to_dict())
    print(c.format_summary(summary))

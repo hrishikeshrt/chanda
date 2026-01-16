@@ -67,15 +67,15 @@ Python API
 
 .. code-block:: python
 
-   from chanda import identify_meter
+   from chanda import analyze_line
 
    # Identify meter from a single line
    text = "को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्"
-   result = identify_meter(text)
+   result = analyze_line(text)
 
-   print(result['display_chanda'])  # Output: Anuṣṭup (पाद 1)
-   print(result['display_gana'])    # Output: नभजलगलग
-   print(result['matra'])           # Output: 32
+   print([name for name, _ in result.chanda])  # Output: ['अनुष्टुभ्']
+   print(result.gana)    # Output: नभजलगलग
+   print(result.matra)           # Output: 32
 
 Command-Line Interface
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -104,15 +104,6 @@ Contents
    installation
    usage
    api
-
-.. toctree::
-   :maxdepth: 2
-   :caption: API Reference
-
-   api/chanda
-   api/core
-   api/utils
-   api/cli
 
 Indices and tables
 ==================
