@@ -123,7 +123,7 @@ class SanskritChandaAnalyzer(ChandaAnalyzer):
             )
             lg_marks.append(SyllableWeight.L.value if is_laghu else SyllableWeight.G.value)
 
-        # Handle the last syllable (always guru by convention in verse final position)
+        # Handle the last syllable (may be laghu; matching applies final fallback).
         last_syllable = flat_syllables[-1]
         if self._is_empty_mark(last_syllable, skip_syllables):
             lg_marks.append('')

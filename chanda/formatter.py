@@ -171,12 +171,11 @@ def format_analysis_summary(results: Dict[str, Any]) -> str:
     if 'result' not in results:
         return "No results available"
 
-    # Create a temporary Chanda instance to use its formatting
-    # This is a bit hacky but maintains backward compatibility
     summary_data = {
         'line': results['result'].get('line', []),
         'verse': results['result'].get('verse', [])
     }
-
-    # Use Chanda's summarize_results if available
-    return f"Analysis complete: {len(summary_data['line'])} lines, {len(summary_data['verse'])} verses"
+    # Avoid loading data files; summarize_results uses only formatting helpers.
+    analyzer = Chanda.__new__(Chanda)
+    summary = analyzer.summarize_results(summary_data)
+    return Chanda.format_summary(summary)

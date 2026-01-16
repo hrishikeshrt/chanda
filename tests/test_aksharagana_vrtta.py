@@ -238,7 +238,7 @@ class TestCoreFeatures:
         """
         return Chanda(get_default_data_path())
 
-    def test_mark_lg(self, chanda):
+    def test_mark_syllable_weights(self, chanda):
         """
         Test laghu-guru marking.
 
@@ -248,7 +248,7 @@ class TestCoreFeatures:
             Analyzer fixture.
         """
         text = "धर्मक्षेत्रे"
-        syllables, lg_marks = chanda.mark_lg(text)
+        syllables, lg_marks = chanda.mark_syllable_weights(text)
 
         assert len(lg_marks) > 0, "Should return LG marks"
         assert all(mark in ['L', 'G', ''] for mark in lg_marks), "Marks should be L, G, or empty"

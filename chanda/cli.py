@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .core import Chanda, analyze_line, analyze_text
-from .formatter import format_result
+from .formatter import format_result, format_analysis_summary
 from .utils import get_default_data_path, get_supported_meters
 
 
@@ -414,12 +414,7 @@ def format_text_output(results: Dict[str, Any], args: argparse.Namespace) -> str
             output_lines.append(f"{'='*80}")
             output_lines.append("SUMMARY")
             output_lines.append(f"{'='*80}")
-            from .core import Chanda
-            summary = Chanda.format_summary(
-                Chanda(args.data_path or get_default_data_path()).summarize_results(
-                    result_dict
-                )
-            )
+            summary = format_analysis_summary({'result': result_dict})
             output_lines.append(summary)
 
     return '\n'.join(output_lines)

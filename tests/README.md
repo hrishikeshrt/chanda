@@ -130,7 +130,7 @@ def chanda():
     return Chanda(get_default_data_path())
 
 def test_with_fixture(chanda):
-    syllables, lg = chanda.mark_lg("धर्म")
+    syllables, lg = chanda.mark_syllable_weights("धर्म")
     assert len(lg) > 0
 ```
 

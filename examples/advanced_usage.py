@@ -24,7 +24,7 @@ def example_1_custom_analysis():
     text = "धर्मक्षेत्रे कुरुक्षेत्रे"
 
     # Get syllables and LG marks
-    syllables, lg_marks = analyzer.mark_lg(text)
+    syllables, lg_marks = analyzer.mark_syllable_weights(text)
 
     print(f"Text: {text}\n")
 

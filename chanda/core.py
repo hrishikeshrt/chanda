@@ -128,7 +128,7 @@ class Chanda:
     ###########################################################################
 
     @functools.lru_cache(maxsize=MAX_CACHE)
-    def mark_lg(self, text: str) -> Tuple[Syllables, List[str]]:
+    def mark_syllable_weights(self, text: str) -> Tuple[Syllables, List[str]]:
         """
         Mark laghu-guru using the language-specific prosody analyzer.
 
@@ -171,7 +171,7 @@ class Chanda:
         """
         if clean:
             line = skt.clean(line)
-        syllables, lg_marks = self.mark_lg(line)
+        syllables, lg_marks = self.mark_syllable_weights(line)
         lg_str = ''.join(lg_marks)
         if not lg_str:
             return None
@@ -526,32 +526,27 @@ class Chanda:
                 lakshana = lakshana.replace(
                     '-', f"[{self.L}{self.G}]"
                 )
-                if not pada:
-                    chanda_pada[names]['1'] = lakshana
-                    chanda_pada[names]['2'] = lakshana
-                    chanda_pada[names]['3'] = lakshana
-                    chanda_pada[names]['4'] = lakshana
-
-                # NOTE: Special handling for ardhasama meters
-                # If pada is 1 or 2, also add pada 3 or 4 respectively
-                # If 3 or 4 exists independently, it will overwrite
-                # need to improve this ad-hoc fix
-                # main reason for this is that lines are processed 1-by-1
-                # one solution can be to accumulate lakshana for all chanda,
-                # or explicitly mention pada for which it is valid
+                # NOTE:
+                # First, if pada is None => Sama Vṛtta => Same lakshana for 1-4
+                # if pada == 1, initialize all 4 pada (in case 3 and 4 are absent)
+                # if pada == 2 (which should appear after pada == 1 appears), set 2, 4 same as 2 (in case 3 and 4 are absent)
+                # if 3 or 4 exists independently, it will overwrite
+                # TODO: Do we need to improve this ad-hoc fix?
+                # Main reason for such processing is that lines are processed 1-by-1
+                # One solution can be to accumulate pada lakshana for all chanda,
+                # or explicitly mention pada for which it is valid in definitions
                 # (e.g. 1/2/3/4 for sama, 1/3, 2/4 for ardhasama)
                 # TODO: when multi_chanda match exists, that should get 2x or 4x weightage
                 # compared to single. i.e. 2 errors in 1 pada are more severe than 2 errors in 2 padas or 3-4 errors in 4 padas
                 # so their "relative" edit distance may need to be divided by 2 or 4.
-                if pada == '1':
-                    chanda_pada[names][pada] = lakshana
-                    chanda_pada[names]['2'] = lakshana  ### ANOTHER HACK to ensure order is 1-2-3-4
-                    chanda_pada[names]['3'] = lakshana
-                    chanda_pada[names]['4'] = lakshana  ### ANOTHER HACK to ensure order is 1-2-3-4
+
+                if not pada or pada == '1':
+                    for pada_id in ('1', '2', '3', '4'):
+                        chanda_pada[names][pada_id] = lakshana
                 elif pada == '2':
-                    chanda_pada[names][pada] = lakshana
-                    chanda_pada[names]['4'] = lakshana
-                else:
+                    for pada_id in ('2', '4'):
+                        chanda_pada[names][pada_id] = lakshana
+                else: # pada = '3' or '4'
                     chanda_pada[names][pada] = lakshana
 
                 if lakshana:
@@ -710,7 +705,7 @@ class Chanda:
         replace_cost: int = 1,
         delete_cost: int = 1,
         insert_cost: int = 1,
-        max_diff: int = 3
+        max_diff: int = 10
     ) -> Tuple[int, Optional[List[Tuple[str, int, int]]]]:
         """
         Compute edit operations between two laghu-guru strings.
@@ -771,7 +766,7 @@ class Chanda:
         Parameters
         ----------
         syllables : list
-            Nested syllable structure from ``mark_lg``.
+            Nested syllable structure from ``mark_syllable_weights``.
         lg_marks : list[str]
             Laghu-guru marks aligned to syllables.
         lg_str : str
@@ -976,8 +971,8 @@ class Chanda:
 
         Notes
         -----
-        Currently supports 4-line verses (ślokas). Future support planned
-        for 2-line verses (i.e., 2 pādas in same line).
+        Supports configurable verse line grouping; mātrā-vṛtta matching
+        also allows two-line collapse of four-pāda patterns.
         """
         line_results: List[LineResult] = []
         verse_results: List[VerseResult] = []
