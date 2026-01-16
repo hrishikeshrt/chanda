@@ -21,7 +21,7 @@ def read_long_description():
 
 setup(
     name='chanda',
-    version='0.1.1',
+    version='1.0.0',
     description='Sanskrit meter identification and analysis library',
     long_description=read_long_description(),
     long_description_content_type='text/markdown',

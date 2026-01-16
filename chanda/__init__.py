@@ -30,7 +30,7 @@ Examples
 ['Anuṣṭup']
 """
 
-__version__ = "0.1.1"
+__version__ = "1.0.0"
 __author__ = "Hrishikesh Terdalkar"
 
 from .core import Chanda, analyze_line, analyze_text
