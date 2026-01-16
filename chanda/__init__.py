@@ -1,45 +1,73 @@
 """
-Chandojñānam: Sanskrit Meter Identification Library
-===================================================
+Chandojñānam: Sanskrit Meter Identification Library.
 
-A comprehensive Python library for identifying and analyzing Sanskrit poetic meters (chanda/छन्द).
+Extended Summary
+----------------
+A Python library for identifying and analyzing Sanskrit poetic meters
+(chanda/छन्द), including Sama, Ardhasama, Viṣama, and Mātrā-vṛtta meters.
 
-Basic Usage:
-    >>> from chanda import identify_meter
-    >>> result = identify_meter("को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्")
-    >>> print(result['display_chanda'])
-    'Anuṣṭup'
+Notes
+-----
+Main components include:
+- ``Chanda``: core meter identification and analysis class
+- ``analyze_line``: quick meter identification for a single line
+- ``analyze_text``: multi-line and verse analysis
 
-Main Components:
-    - Chanda: Core meter identification and analysis class
-    - identify_meter: Convenient function for quick meter identification
-    - analyze_text: Multi-line and verse analysis
+Supported features include:
+- 200+ Sanskrit meters
+- Exact and fuzzy pattern matching
+- Multi-script support (Devanagari, IAST, ITRANS, etc.)
+- Syllable-level scansion (Laghu-Guru marking)
+- Gaṇa notation conversion
+- Verse-level analysis
+- Mātrā counting for mātrā-based meters
 
-Supported Features:
-    - 200+ Sanskrit meters (Sama, Ardhasama, Vishama, Matra-based)
-    - Exact and fuzzy pattern matching
-    - Multi-script support (15+ schemes: Devanagari, IAST, ITRANS, etc.)
-    - Syllable-level scansion (Laghu-Guru marking)
-    - Gana notation conversion
-    - Verse-level analysis
-    - Matra (morae) counting for matra-based meters
-
-Author: Hrishikesh Terdalkar
-License: AGPL-3.0-or-later
+Examples
+--------
+>>> from chanda import analyze_line
+>>> result = analyze_line("को न्वस्मिन् साम्प्रतं लोके गुणवान् कश्च वीर्यवान्")
+>>> print([name for name, _ in result.chanda])
+['Anuṣṭup']
 """
 
 __version__ = "0.1.1"
 __author__ = "Hrishikesh Terdalkar"
 
-from .core import Chanda
-from .utils import identify_meter, analyze_text, format_result
+from .core import Chanda, analyze_line, analyze_text
+from .formatter import format_result, display_fields, format_chanda_list
+from .utils import get_supported_meters
+from .types import (
+    ChandaResult,
+    LineResult,
+    VerseResult,
+    AnalysisResult,
+    MeterStats,
+    TextAnalysisResult
+)
+from .constants import Language
 from .exceptions import ChandaError, InvalidInputError, MeterNotFoundError
 
 __all__ = [
+    # Core classes and functions
     'Chanda',
-    'identify_meter',
+    'analyze_line',
     'analyze_text',
+    # Formatting
     'format_result',
+    'display_fields',
+    'format_chanda_list',
+    # Utilities
+    'get_supported_meters',
+    # Types
+    'ChandaResult',
+    'LineResult',
+    'VerseResult',
+    'AnalysisResult',
+    'MeterStats',
+    'TextAnalysisResult',
+    # Constants
+    'Language',
+    # Exceptions
     'ChandaError',
     'InvalidInputError',
     'MeterNotFoundError',

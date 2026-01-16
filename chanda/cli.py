@@ -3,21 +3,30 @@
 """
 Command-line interface for Chandojñānam.
 
-This module provides a CLI tool for identifying Sanskrit meters from the command line.
+This module provides a CLI tool for identifying Sanskrit meters from
+the command line.
 """
 
 import argparse
 import sys
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from .core import Chanda
-from .utils import identify_meter, analyze_text, format_result, get_default_data_path, get_supported_meters
+from .core import Chanda, analyze_line, analyze_text
+from .formatter import format_result
+from .utils import get_default_data_path, get_supported_meters
 
 
-def main():
-    """Main entry point for the CLI."""
+def main() -> int:
+    """
+    Main entry point for the CLI.
+
+    Returns
+    -------
+    int
+        Exit code.
+    """
     parser = argparse.ArgumentParser(
         prog='chanda',
         description='Sanskrit Meter Identification Tool',
@@ -130,8 +139,20 @@ def main():
         return 1
 
 
-def get_input_text(args) -> Optional[str]:
-    """Get input text from command line arguments."""
+def get_input_text(args: argparse.Namespace) -> Optional[str]:
+    """
+    Get input text from command line arguments.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed CLI arguments.
+
+    Returns
+    -------
+    str or None
+        Input text if present; otherwise ``None``.
+    """
     if args.text:
         return args.text
     elif args.file:
@@ -142,8 +163,22 @@ def get_input_text(args) -> Optional[str]:
     return None
 
 
-def perform_analysis(text: str, args):
-    """Perform meter identification analysis."""
+def perform_analysis(text: str, args: argparse.Namespace) -> Dict[str, Any]:
+    """
+    Perform meter identification analysis.
+
+    Parameters
+    ----------
+    text : str
+        Input text to analyze.
+    args : argparse.Namespace
+        Parsed CLI arguments.
+
+    Returns
+    -------
+    dict
+        Result payload tagged with ``type`` and ``result``.
+    """
     data_path = args.data_path or get_default_data_path()
     fuzzy = not args.no_fuzzy
 
@@ -151,7 +186,7 @@ def perform_analysis(text: str, args):
     lines = text.strip().split('\n')
     if len(lines) == 1 and not args.verse:
         # Single line analysis
-        result = identify_meter(
+        result = analyze_line(
             text,
             fuzzy=fuzzy,
             output_scheme=args.scheme,
@@ -170,8 +205,17 @@ def perform_analysis(text: str, args):
         return {'type': 'multi', 'result': results}
 
 
-def output_results(results, args):
-    """Output analysis results in the specified format."""
+def output_results(results: Dict[str, Any], args: argparse.Namespace) -> None:
+    """
+    Output analysis results in the specified format.
+
+    Parameters
+    ----------
+    results : dict
+        Analysis result payload.
+    args : argparse.Namespace
+        Parsed CLI arguments.
+    """
     output = format_output(results, args)
 
     if args.output:
@@ -181,8 +225,22 @@ def output_results(results, args):
         print(output)
 
 
-def format_output(results, args) -> str:
-    """Format results according to specified output format."""
+def format_output(results: Dict[str, Any], args: argparse.Namespace) -> str:
+    """
+    Format results according to specified output format.
+
+    Parameters
+    ----------
+    results : dict
+        Analysis result payload.
+    args : argparse.Namespace
+        Parsed CLI arguments.
+
+    Returns
+    -------
+    str
+        Formatted output string.
+    """
     if args.format == 'json':
         return format_json_output(results, args)
     elif args.format == 'simple':
@@ -191,54 +249,137 @@ def format_output(results, args) -> str:
         return format_text_output(results, args)
 
 
-def format_json_output(results, args) -> str:
-    """Format results as JSON."""
+def _as_dict(value: Any) -> Any:
+    """
+    Normalize result-like objects into dictionaries.
+
+    Parameters
+    ----------
+    value : object
+        Object with a ``to_dict`` method or a raw dictionary.
+
+    Returns
+    -------
+    object
+        Dictionary representation if available; otherwise the original value.
+    """
+    if hasattr(value, 'to_dict'):
+        return value.to_dict()
+    return value
+
+
+def _format_chanda(result: Dict[str, Any]) -> str:
+    """
+    Format a chanda list for display.
+
+    Parameters
+    ----------
+    result : dict
+        Line result payload containing a ``chanda`` list.
+
+    Returns
+    -------
+    str
+        Formatted chanda string.
+    """
+    if not result.get('chanda'):
+        return "Not found"
+    from .core import Chanda
+    return Chanda.format_chanda_list(result.get('chanda', []))
+
+
+def format_json_output(results: Dict[str, Any], args: argparse.Namespace) -> str:
+    """
+    Format results as JSON.
+
+    Parameters
+    ----------
+    results : dict
+        Analysis result payload.
+    args : argparse.Namespace
+        Parsed CLI arguments.
+
+    Returns
+    -------
+    str
+        JSON output string.
+    """
     if results['type'] == 'single':
-        output_data = results['result']
+        output_data = _as_dict(results['result'])
     else:
-        output_data = results['result']['result']
+        output_data = _as_dict(results['result']).get('result')
 
     return json.dumps(output_data, ensure_ascii=False, indent=2)
 
 
-def format_simple_output(results, args) -> str:
-    """Format results in simple, concise format."""
+def format_simple_output(results: Dict[str, Any], args: argparse.Namespace) -> str:
+    """
+    Format results in simple, concise format.
+
+    Parameters
+    ----------
+    results : dict
+        Analysis result payload.
+    args : argparse.Namespace
+        Parsed CLI arguments.
+
+    Returns
+    -------
+    str
+        Simple formatted output string.
+    """
     output_lines = []
 
     if results['type'] == 'single':
-        result = results['result']
+        result = _as_dict(results['result'])
         if result.get('found'):
-            chanda = result.get('display_chanda', 'Unknown')
-            output_lines.append(f"{result['display_line']}")
+            chanda = _format_chanda(result)
+            output_lines.append(f"{result['line']}")
             output_lines.append(f"Meter: {chanda}")
-            output_lines.append(f"Pattern: {' '.join(result.get('display_lg', []))}")
+            output_lines.append(f"Pattern: {' '.join(result.get('lg', []))}")
         else:
-            output_lines.append(f"{result['display_line']}")
+            output_lines.append(f"{result['line']}")
             output_lines.append("Meter: Not found")
             if result.get('fuzzy'):
                 top = result['fuzzy'][0]
-                output_lines.append(f"Closest: {top['display_chanda']} ({top['similarity']:.2%})")
+                top_display = _format_chanda(top)
+                output_lines.append(f"Closest: {top_display} ({top['similarity']:.2%})")
     else:
-        line_results = results['result']['result']['line']
+        line_results = _as_dict(results['result']).get('result', {}).get('line', [])
         for line_res in line_results:
             res = line_res['result']
-            line = res.get('display_line', '')
-            chanda = res.get('display_chanda', 'Unknown') if res.get('found') else 'Not found'
+            line = res.get('line', '')
+            chanda = _format_chanda(res) if res.get('found') else 'Not found'
             output_lines.append(f"{line} -> {chanda}")
 
     return '\n'.join(output_lines)
 
 
-def format_text_output(results, args) -> str:
-    """Format results in detailed text format."""
+def format_text_output(results: Dict[str, Any], args: argparse.Namespace) -> str:
+    """
+    Format results in detailed text format.
+
+    Parameters
+    ----------
+    results : dict
+        Analysis result payload.
+    args : argparse.Namespace
+        Parsed CLI arguments.
+
+    Returns
+    -------
+    str
+        Detailed formatted output string.
+    """
     output_lines = []
 
     if results['type'] == 'single':
         result = results['result']
         output_lines.append(format_result(result))
     else:
-        line_results = results['result']['result']['line']
-        verse_results = results['result']['result'].get('verse', [])
+        result_dict = _as_dict(results['result']).get('result', {})
+        line_results = result_dict.get('line', [])
+        verse_results = result_dict.get('verse', [])
 
         if verse_results:
             # Verse mode output
@@ -255,7 +396,7 @@ def format_text_output(results, args) -> str:
                     output_lines.append("Best meter(s): Not found")
                 output_lines.append("")
 
-                for line_idx in verse['lines']:
+                for line_idx in verse.get('line_indices', []):
                     line_res = line_results[line_idx]
                     output_lines.append(format_result(line_res['result']))
                     output_lines.append("")
@@ -276,7 +417,7 @@ def format_text_output(results, args) -> str:
             from .core import Chanda
             summary = Chanda.format_summary(
                 Chanda(args.data_path or get_default_data_path()).summarize_results(
-                    results['result']['result']
+                    result_dict
                 )
             )
             output_lines.append(summary)
@@ -284,16 +425,24 @@ def format_text_output(results, args) -> str:
     return '\n'.join(output_lines)
 
 
-def show_meter_list(data_path: Optional[str] = None):
-    """Display list of all supported meters."""
+def show_meter_list(data_path: Optional[str] = None) -> None:
+    """
+    Display list of all supported meters.
+
+    Parameters
+    ----------
+    data_path : str, optional
+        Path to meter definition data directory.
+    """
     meters = get_supported_meters(data_path)
 
     print("Chandojñānam - Supported Sanskrit Meters")
     print("=" * 80)
-    print(f"Total meters: {meters['total']}")
-    print(f"  - Sama-vṛtta (same pattern in all padas): {meters['sama']}")
-    print(f"  - Ardhasama/Viṣama-vṛtta (varying patterns): {meters['ardhasama_vishama']}")
-    print(f"  - Mātrā-vṛtta (matra-based): {meters['matra']}")
+    print(f"Total meters: {meters.total}")
+    print(f"  - Sama-vṛtta (same pattern in all padas): {meters.sama}")
+    print(f"  - Ardhasama-vṛtta (alternating padas): {meters.ardhasama}")
+    print(f"  - Viṣama-vṛtta (uneven padas): {meters.vishama}")
+    print(f"  - Mātrā-vṛtta (matra-based): {meters.matra}")
     print()
     print("Examples of popular meters:")
     print("  - Anuṣṭup (श्लोक)")
