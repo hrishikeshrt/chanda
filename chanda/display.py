@@ -53,11 +53,11 @@ def format_chanda_pada(chanda: str, pada: tuple) -> str:
     if not pada:
         return chanda
     if len(pada) == 1:
-        return f"{chanda} (\u092a\u093e\u0926 {pada[0]})" if pada[0] else chanda
+        return f"{chanda} (पाद {pada[0]})" if pada[0] else chanda
     if len(pada) == 2:
-        return f"{chanda} (\u092a\u093e\u0926 {pada[0]}-{pada[1]})"
+        return f"{chanda} (पाद {pada[0]}-{pada[1]})"
     if len(pada) == 4:
-        return f"{chanda} (\u092a\u093e\u0926 {pada[0]}-{pada[3]})"
+        return f"{chanda} (पाद {pada[0]}-{pada[3]})"
     raise ValueError("Invalid pada length")
 
 

@@ -175,7 +175,5 @@ def format_analysis_summary(results: Dict[str, Any]) -> str:
         'line': results['result'].get('line', []),
         'verse': results['result'].get('verse', [])
     }
-    # Avoid loading data files; summarize_results uses only formatting helpers.
-    analyzer = Chanda.__new__(Chanda)
-    summary = analyzer.summarize_results(summary_data)
+    summary = Chanda.summarize_results(summary_data)
     return Chanda.format_summary(summary)

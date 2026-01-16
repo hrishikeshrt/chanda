@@ -1329,8 +1329,9 @@ class Chanda:
 
     ###########################################################################
 
+    @classmethod
     def summarize_results(
-        self,
+        cls,
         results: Union[TextAnalysisResult, AnalysisResult, Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
@@ -1366,7 +1367,7 @@ class Chanda:
             if line_result['found']:
                 counts['match_line'] += 1
                 chanda_list = [
-                    self.format_chanda_pada(c, p)
+                    cls.format_chanda_pada(c, p)
                     for c, p in line_result.get('chanda', [])
                 ]
                 gana_list = [line_result.get('gana', "")]
@@ -1378,7 +1379,7 @@ class Chanda:
                 for idx, fuzzy_match in enumerate(line_result['fuzzy']):
                     if idx == 0:
                         counts['mismatch_syllable'] += fuzzy_match['cost']
-                    chanda_list = self.format_chanda_list(
+                    chanda_list = cls.format_chanda_list(
                         fuzzy_match.get('chanda', [])
                     ).split('/') if fuzzy_match.get('chanda') else []
                     fuzzy_line_statistics['chanda'].update(chanda_list)
