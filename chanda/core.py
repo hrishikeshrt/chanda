@@ -125,6 +125,12 @@ class Chanda:
         # Read Data
         self.read_data()
 
+        # Pre-compile regex patterns for all CHANDA keys
+        self._COMPILED_REGEX = {
+            pattern: re.compile(f'^{pattern}$')
+            for pattern in self.CHANDA
+        }
+
     ###########################################################################
 
     @functools.lru_cache(maxsize=MAX_CACHE)
@@ -1286,8 +1292,8 @@ class Chanda:
             lg_candidates.append(lg_str[:-1] + self.G)
         regex_matches = [
             pattern
-            for pattern in self.CHANDA
-            if any(re.match(f'^{pattern}$', candidate) for candidate in lg_candidates)
+            for pattern, compiled in self._COMPILED_REGEX.items()
+            if any(compiled.match(candidate) for candidate in lg_candidates)
         ]
 
         found = direct_match['found'] or multi_match['found'] or bool(regex_matches)
@@ -1431,6 +1437,13 @@ class Chanda:
     ###########################################################################
 
 
+
+@functools.lru_cache(maxsize=1)
+def _get_chanda_singleton(data_path: str, language: str) -> 'Chanda':
+    """Return a singleton Chanda instance, recreating it if args change."""
+    return Chanda(data_path, language=language)
+
+
 def analyze_line(
     text: str,
     fuzzy: bool = True,
@@ -1481,7 +1494,7 @@ def analyze_line(
         from .utils import get_default_data_path
         data_path = get_default_data_path()
 
-    analyzer = Chanda(data_path, language=language)
+    analyzer = _get_chanda_singleton(data_path, language)
     result = analyzer.analyze_line(
         text,
         fuzzy=fuzzy,
@@ -1539,7 +1552,7 @@ def analyze_text(
         from .utils import get_default_data_path
         data_path = get_default_data_path()
 
-    analyzer = Chanda(data_path, language=language)
+    analyzer = _get_chanda_singleton(data_path, language)
     results = analyzer.analyze_text(
         text,
         verse=verse_mode,
