@@ -183,6 +183,110 @@ class LineResult:
 
 
 @dataclass
+class MeterScore:
+    """
+    Score and evidence for a single candidate meter within a verse.
+
+    Attributes
+    ----------
+    name : str
+        Meter name.
+    score : float
+        Ranking-only accumulator.  Used internally to order candidates;
+        not meaningful as a standalone number.  Incorporates
+        ``EXACT_WEIGHT`` / ``FUZZY_WEIGHT`` constants and a mātrā bonus
+        so that two meters with equal ``match_extent`` can still be ranked.
+    match_extent : float
+        Human-facing match quality in ``[0.0, 1.0]``.  Fraction of the
+        verse's expected padas that this meter explains:
+        ``(exact_padas + Σ pada_weight × similarity for fuzzy) / verse_lines``.
+        Mātrā evidence does not contribute.
+    evidence : list[dict]
+        Ordered list of per-contribution records.  Each record has:
+
+        - ``line_idx`` (int or None): index of the contributing line, or
+          ``None`` for verse-level contributions (mātrā match).
+        - ``match_type`` (str): ``'exact'``, ``'fuzzy'``, or ``'matra'``.
+        - ``score`` (float): ranking contribution from this record.
+        - ``similarity`` (float): ``1.0`` for exact, actual similarity for
+          fuzzy, ``0.0`` for mātrā.
+        - ``pada`` (list[str]): pada identifiers covered
+          (e.g. ``['1', '2']``, ``[]`` for mātrā).
+        - ``pada_position_valid`` (bool or None): whether the line's
+          position in the verse matches the expected pada position.
+          ``None`` for mātrā records (no line position applies).
+    """
+    name: str
+    score: float
+    match_extent: float
+    evidence: List[Dict[str, Any]] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if not (0.0 <= self.match_extent <= 1.0):
+            raise ValueError(
+                f"MeterScore.match_extent must be in [0.0, 1.0], got {self.match_extent!r}"
+            )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert to a dictionary.
+
+        Returns
+        -------
+        dict
+            Dictionary representation.
+        """
+        return {
+            'name': self.name,
+            'score': self.score,
+            'match_extent': self.match_extent,
+            'evidence': self.evidence,
+        }
+
+    def to_json(self, *, indent: int = 2, ensure_ascii: bool = False) -> str:
+        """
+        Serialize to JSON.
+
+        Returns
+        -------
+        str
+            JSON string representation.
+        """
+        return json.dumps(self.to_dict(), ensure_ascii=ensure_ascii, indent=indent)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'MeterScore':
+        """
+        Create a MeterScore from a dictionary.
+
+        Parameters
+        ----------
+        data : dict
+            Dictionary with ``name``, ``score``, ``match_extent``, and
+            ``evidence`` keys.
+
+        Returns
+        -------
+        MeterScore
+            Parsed object.
+        """
+        match_extent = float(data.get('match_extent', 0.0))
+        if not (0.0 <= match_extent <= 1.0):
+            raise ValueError(
+                f"MeterScore.match_extent must be in [0.0, 1.0], got {match_extent!r}"
+            )
+        return cls(
+            name=data['name'],
+            score=data.get('score', data.get('total', 0.0)),
+            match_extent=match_extent,
+            evidence=data.get('evidence', []),
+        )
+
+
+# --------------------------------------------------------------------------- #
+
+
+@dataclass
 class VerseResult:
     """
     Result of verse-level analysis.
@@ -190,18 +294,26 @@ class VerseResult:
     Attributes
     ----------
     chanda : tuple[list[str], float] or None
-        Best-matching meters and score.
-    scores : list[tuple[str, float]]
-        All meter scores for the verse.
+        Convenience field: best-matching meter name(s) and their ``score``.
+        Ties are represented as multiple names in the list.  Derived from
+        ``scores`` at analysis time.
+    scores : list[MeterScore]
+        All candidate meters sorted by ``score`` (descending), each carrying
+        its per-line evidence breakdown.
     line_indices : list[int]
         Line indices belonging to this verse.
     line_results : list[LineResult]
         Line-wise results for this verse.
+    is_partial : bool
+        ``True`` when the verse group ended because the input ran out before
+        filling the expected number of lines (``verse_lines``).  A partial
+        verse should be interpreted with lower confidence.
     """
     chanda: Optional[Tuple[List[str], float]] = None
-    scores: List[Tuple[str, float]] = field(default_factory=list)
+    scores: List[MeterScore] = field(default_factory=list)
     line_indices: List[int] = field(default_factory=list)
     line_results: List[LineResult] = field(default_factory=list)
+    is_partial: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -214,9 +326,13 @@ class VerseResult:
         """
         return {
             'chanda': self.chanda,
-            'scores': self.scores,
+            'scores': [
+                ms.to_dict() if isinstance(ms, MeterScore) else ms
+                for ms in self.scores
+            ],
             'line_indices': list(self.line_indices),
             'line_results': [line.to_dict() for line in self.line_results],
+            'is_partial': self.is_partial,
         }
 
     def to_json(self, *, indent: int = 2, ensure_ascii: bool = False) -> str:
@@ -255,11 +371,22 @@ class VerseResult:
         line_results = [
             LineResult.from_dict(item) for item in data.get('line_results', [])
         ]
+        raw_scores = data.get('scores', [])
+        scores = []
+        for s in raw_scores:
+            if isinstance(s, dict) and 'evidence' in s:
+                scores.append(MeterScore.from_dict(s))
+            elif isinstance(s, (list, tuple)) and len(s) == 2:
+                # backwards-compat: old format was [name, total] pairs
+                scores.append(MeterScore(name=s[0], score=s[1], match_extent=0.0))
+            else:
+                scores.append(s)
         return cls(
             chanda=data.get('chanda'),
-            scores=data.get('scores', []),
+            scores=scores,
             line_indices=data.get('line_indices', data.get('lines', [])),
-            line_results=line_results
+            line_results=line_results,
+            is_partial=data.get('is_partial', False),
         )
 
 
