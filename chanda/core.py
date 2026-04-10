@@ -38,9 +38,12 @@ import sanskrit_text as skt
 from .constants import (
     MAX_CACHE,
     DEFAULT_VERSE_LINES,
+    EXACT_WEIGHT,
+    FUZZY_WEIGHT,
     SyllableWeight,
     GanaSymbol
 )
+from .utils import get_default_data_path
 from .analyzer import get_chanda_analyzer
 from .display import (
     format_chanda_pada as _format_chanda_pada,
@@ -49,12 +52,42 @@ from .display import (
     format_summary as _format_summary,
 )
 from .processor import SanskritTextProcessor
-from .types import ChandaResult, LineResult, VerseResult, AnalysisResult, TextAnalysisResult
+from .types import ChandaResult, LineResult, MeterScore, VerseResult, AnalysisResult, TextAnalysisResult
 
 ###############################################################################
 
 
 Syllables = List[List[List[str]]]
+
+
+def _pada_position_valid(pada: List[str], verse_line_pos: int) -> bool:
+    """
+    Check whether a matched pada is consistent with the line's position in the verse.
+
+    Parameters
+    ----------
+    pada : list[str]
+        Pada identifiers from the match (e.g. ``['1']``, ``['1', '2']``,
+        ``['']`` for sama-vṛtta with no explicit pada restriction).
+    verse_line_pos : int
+        0-indexed position of the line within the current verse group.
+
+    Returns
+    -------
+    bool
+        ``True`` if the pada implies this position is valid.
+
+    Notes
+    -----
+    Pada ``''`` (sama-vṛtta) is valid at any position.
+    Padas ``'1'``–``'4'`` are checked as 1-indexed: position 0 → pada 1,
+    position 1 → pada 2, etc.  For ardhasama meters where pada ``'1'``
+    also applies to position 2, this will return ``False`` at position 2 —
+    the field is informational and is not used in scoring.
+    """
+    if not pada or '' in pada:
+        return True
+    return str(verse_line_pos + 1) in pada
 
 
 class Chanda:
@@ -94,7 +127,7 @@ class Chanda:
 
     def __init__(
         self,
-        data_path: str,
+        data_path: str = get_default_data_path(),
         symbols: str = 'यरतनभजसमलग',
         language: str = 'sanskrit'
     ) -> None:
@@ -514,12 +547,17 @@ class Chanda:
                 if not row[0].strip():
                     continue
 
-                # `meters` is a tuple since we need it to be hashable
-                # for use as a key in the dictionary `chanda_pada`
-                names = tuple(c.strip() for c in row[0].split(','))
+                # Aliases in the same CSV cell are joined as one name with
+                # " = " so they appear as a single entry throughout the
+                # pipeline.  `names` is kept as a 1-tuple because it is
+                # used as a hashable dict key in `chanda_pada` below.
+                combined_name = ' = '.join(
+                    c.strip() for c in row[0].split(',') if c.strip()
+                )
+                names = (combined_name,)
                 pada = row[1].strip()
                 # meters = ((chanda, pada), ...)
-                meters = tuple((c, (pada,)) for c in names)
+                meters = ((combined_name, (pada,)),)
                 lakshana = ''.join(row[2].split())
                 lakshana = lakshana.translate(self.ttable_in)
                 lakshana = self.gana_to_lg(lakshana)
@@ -649,7 +687,8 @@ class Chanda:
         """
         self.read_jaati(os.path.join(self.data_path, 'chanda_jaati.csv'))
         definition_files = [
-            'chanda_sama.csv', 'chanda_ardhasama.csv', 'chanda_vishama.csv'
+            'chanda_sama.csv', 'chanda_ardhasama.csv',
+            'chanda_vishama.csv', 'chanda_upajaati.csv',
         ]
         for chanda_file in definition_files:
             self.read_chanda_definitions(
