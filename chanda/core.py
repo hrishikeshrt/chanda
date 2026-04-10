@@ -1036,66 +1036,120 @@ class Chanda:
             verse_result = VerseResult()
 
             line_count = 0
-            ongoing_score = Counter()
+            meter_evidence: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
             verse_matra_options = []
 
             for line_idx, line_result in enumerate(line_results):
                 result = line_result.result
+                # verse_line_pos is 0-indexed position within the current verse
+                verse_line_pos = line_count
+
                 if result.matra:
                     matra_options = self._matra_options_from_result(result)
                     if matra_options:
                         verse_matra_options.append(matra_options)
+
                 if result.found:
-                    _chanda = result.chanda
-                    _unique_chanda = list(dict(_chanda))
-                    for _c in _unique_chanda:
-                        ongoing_score[_c] += 1
-                    # TODO:
-                    # If the exact match is by accident, other matches don't
-                    # get a score. Decide if we want to calculate fuzzy matches
-                    # irrespective of an exact match or not.
+                    # Group by name, keeping the pada tuple with the most
+                    # padas so a 4-pada multi-match scores higher than a
+                    # 1-pada single match for the same meter.
+                    chanda_by_name: Dict[str, Tuple] = {}
+                    for name, pada in result.chanda:
+                        if name not in chanda_by_name or len(pada) > len(chanda_by_name[name]):
+                            chanda_by_name[name] = pada
+                    for name, pada in chanda_by_name.items():
+                        pada_weight = max(len(pada), 1)
+                        meter_evidence[name].append({
+                            'line_idx': line_idx,
+                            'match_type': 'exact',
+                            'score': float(pada_weight) * EXACT_WEIGHT,
+                            'similarity': 1.0,
+                            'pada': list(pada),
+                            'pada_position_valid': _pada_position_valid(pada, verse_line_pos),
+                        })
                 else:
                     for fuzzy_match in result.fuzzy:
-                        _chanda = fuzzy_match['chanda']
-                        _unique_chanda = list(dict(_chanda))
-                        for _c in _unique_chanda:
-                            ongoing_score[_c] += fuzzy_match['similarity']
+                        chanda_by_name = {}
+                        for name, pada in fuzzy_match['chanda']:
+                            if name not in chanda_by_name or len(pada) > len(chanda_by_name[name]):
+                                chanda_by_name[name] = pada
+                        sim = fuzzy_match['similarity']
+                        for name, pada in chanda_by_name.items():
+                            pada_weight = max(len(pada), 1)
+                            meter_evidence[name].append({
+                                'line_idx': line_idx,
+                                'match_type': 'fuzzy',
+                                'score': pada_weight * sim * FUZZY_WEIGHT,
+                                'similarity': sim,
+                                'pada': list(pada),
+                                'pada_position_valid': _pada_position_valid(pada, verse_line_pos),
+                            })
 
                 verse_result.line_indices.append(line_idx)
                 line_count += 1
-                if line_count % verse_lines == 0 or line_idx == len(line_results) - 1:
+                is_last = line_idx == len(line_results) - 1
+                if line_count % verse_lines == 0 or is_last:
+                    is_partial = is_last and (line_count % verse_lines != 0)
+
                     if len(verse_matra_options) >= 2:
                         for matra_tuple in self._iter_matra_tuples(verse_matra_options):
                             matra_match = self.find_matra_match(matra_tuple)
                             if matra_match['found']:
+                                matra_score = float(len(verse_result.line_indices))
                                 for name, pada in matra_match['chanda']:
-                                    ongoing_score[name] += len(verse_result.line_indices)
+                                    meter_evidence[name].append({
+                                        'line_idx': None,
+                                        'match_type': 'matra',
+                                        'score': matra_score,
+                                        'similarity': 0.0,
+                                        'pada': [],
+                                        'pada_position_valid': None,
+                                    })
                                 break
 
-                    verse_scores = ongoing_score.most_common()
-                    if verse_scores:
-                        best_score = verse_scores[0][1]
-                        best_matches = ([
-                            _c
-                            for _c, _score in verse_scores
-                            if _score == best_score
-                        ], best_score)
-                        verse_result.scores = verse_scores
-                        verse_result.chanda = best_matches
+                    effective_verse_lines = line_count  # actual lines in this verse
+                    meter_scores = sorted(
+                        [
+                            MeterScore(
+                                name=name,
+                                score=sum(e['score'] for e in evs),
+                                match_extent=min(
+                                    sum(
+                                        max(len(e['pada']), 1) * e['similarity']
+                                        for e in evs
+                                        if e['match_type'] != 'matra'
+                                    ) / effective_verse_lines,
+                                    1.0
+                                ),
+                                evidence=evs,
+                            )
+                            for name, evs in meter_evidence.items()
+                        ],
+                        key=lambda ms: ms.score,
+                        reverse=True,
+                    )
+                    if meter_scores:
+                        best_score = meter_scores[0].score
+                        best_names = [
+                            ms.name for ms in meter_scores if ms.score == best_score
+                        ]
+                        verse_result.scores = meter_scores
+                        verse_result.chanda = (best_names, best_score)
+                        verse_result.is_partial = is_partial
                         for _line_idx in verse_result.line_indices:
-                            line_result = line_results[_line_idx]
+                            _line_result = line_results[_line_idx]
                             priority_fuzzy = []
                             remaining_fuzzy = []
-                            existing_fuzzy = list(line_result.result.fuzzy)
+                            existing_fuzzy = list(_line_result.result.fuzzy)
                             for fuzzy_match in existing_fuzzy:
                                 if any(
-                                    (x in best_matches[0])
+                                    (x in best_names)
                                     for x in [c[0] for c in fuzzy_match['chanda']]
                                 ):
                                     priority_fuzzy.append(fuzzy_match)
                                 else:
                                     remaining_fuzzy.append(fuzzy_match)
-                            line_result.result.fuzzy = priority_fuzzy + remaining_fuzzy
+                            _line_result.result.fuzzy = priority_fuzzy + remaining_fuzzy
 
                     verse_result.line_results = [
                         line_results[i] for i in verse_result.line_indices
@@ -1103,7 +1157,8 @@ class Chanda:
                     verse_results.append(verse_result)
                     # reset
                     verse_result = VerseResult()
-                    ongoing_score = Counter()
+                    line_count = 0
+                    meter_evidence = defaultdict(list)
                     verse_matra_options = []
 
         analysis = AnalysisResult(
@@ -1116,9 +1171,9 @@ class Chanda:
         if verse:
             for verse_result in verse_results:
                 if verse_result.chanda:
-                    best_matches = " / ".join(verse_result.chanda[0])
-                    best_score = verse_result.chanda[1]
-                    simple_result.append(f"# {best_matches} ({best_score})")
+                    best_names, best_score = verse_result.chanda
+                    for _name in best_names:
+                        simple_result.append(f"# {_name} ({best_score})")
                     simple_result.append("")
                 for line_id in verse_result.line_indices:
                     line_result = line_results[line_id]
@@ -1137,7 +1192,7 @@ class Chanda:
             os.makedirs(save_path, exist_ok=True)
 
             md5sum = hashlib.md5(text.encode('utf-8')).hexdigest()
-            result_id = f"result_{md5sum}_{int(verse)}_{int(fuzzy)}"
+            result_id = f"result_{md5sum}_{int(verse)}_{int(fuzzy)}_{output_scheme}_{int(verse_lines)}"
 
             json_filename = f"{result_id}.json"
             json_path = os.path.join(save_path, json_filename)
