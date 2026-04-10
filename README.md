@@ -133,13 +133,30 @@ verse = """को न्वस्मिन् साम्प्रतं लो
 
 results = analyze_text(verse, verse_mode=True, fuzzy=True)
 
-# Access verse-level results
-for verse in results.result.verse:
-    if not verse.chanda:
+for verse_result in results.result.verse:
+    if not verse_result.chanda:
         continue
-    best_meters, score = verse.chanda
-    print(f"Verse meter: {' / '.join(best_meters)} (score: {score})")
+
+    best_meters, _score = verse_result.chanda
+    # is_partial is True when fewer lines than expected were available
+    partial_note = " (partial)" if verse_result.is_partial else ""
+    print(f"Verse meter: {' / '.join(best_meters)}{partial_note}")
+
+    # Detailed per-meter breakdown via MeterScore
+    winner = verse_result.scores[0]
+    print(f"  Match extent: {winner.match_extent:.0%}")  # fraction of padas explained
+    for ev in winner.evidence:
+        line_idx  = ev['line_idx']   # None for mātrā evidence
+        mtype     = ev['match_type'] # 'exact', 'fuzzy', or 'matra'
+        sim       = ev['similarity'] # 1.0 for exact
+        pada      = ev['pada']       # e.g. ['1', '2']
+        valid_pos = ev['pada_position_valid']
+        print(f"    line {line_idx}: {mtype}, similarity={sim:.2f}, pada={pada}, pos_valid={valid_pos}")
 ```
+
+> **Note on aliases**: meters with multiple traditional names are joined with ` = `, e.g. `"कलहंस = कुटजा = सिंहनाद = नन्दिनी"`.  A tie between *distinct* meters appears as separate entries in `verse_result.scores`.
+>
+> **Note on `score` vs `match_extent`**: `score` in `MeterScore` is an internal ranking accumulator and should not be displayed. Use `match_extent` (0.0–1.0) to show users how well a meter fits the verse.
 
 ---
 

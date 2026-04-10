@@ -41,10 +41,26 @@ Verse Analysis
 
    results = analyze_text(verse, verse_mode=True, fuzzy=True)
 
-   # Access verse-level results
-   for verse in results.result.verse:
-       best_meters, score = verse.chanda
-       print(f"Verse meter: {' / '.join(best_meters)} (score: {score})")
+   for verse_result in results.result.verse:
+       if not verse_result.chanda:
+           continue
+
+       best_meters, _score = verse_result.chanda
+       partial_note = " (partial)" if verse_result.is_partial else ""
+       print(f"Verse meter: {' / '.join(best_meters)}{partial_note}")
+
+       # MeterScore: match_extent is the interpretable quality measure (0–1).
+       # score is an internal ranking accumulator — not for display.
+       winner = verse_result.scores[0]
+       print(f"  Match extent: {winner.match_extent:.0%}")
+
+       # evidence traces which lines contributed and how
+       for ev in winner.evidence:
+           print(
+               f"    line {ev['line_idx']}: {ev['match_type']}, "
+               f"similarity={ev['similarity']:.2f}, pada={ev['pada']}, "
+               f"pos_valid={ev['pada_position_valid']}"
+           )
 
 Command-Line Interface
 ----------------------
@@ -216,17 +232,21 @@ Example 3: Batch Processing
 
 .. code-block:: python
 
-   from chanda import analyze_text
+   from chanda import analyze_text, Chanda
 
    with open('bhagavad_gita.txt', 'r', encoding='utf-8') as f:
        text = f.read()
 
    results = analyze_text(text, verse_mode=True, fuzzy=True)
 
-   # Get summary statistics
-   from chanda import Chanda
-   from chanda.utils import get_default_data_path
+   for verse_result in results.result.verse:
+       if not verse_result.chanda:
+           continue
+       best_meters, _score = verse_result.chanda
+       winner = verse_result.scores[0]
+       partial_note = " (partial)" if verse_result.is_partial else ""
+       print(f"{' / '.join(best_meters)}{partial_note} — {winner.match_extent:.0%} match")
 
-   c = Chanda(get_default_data_path())
-   summary = c.summarize_results(results.result.to_dict())
-   print(c.format_summary(summary))
+   # Aggregate summary statistics across all verses
+   summary = Chanda.summarize_results(results)
+   print(Chanda.format_summary(summary))
