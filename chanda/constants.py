@@ -17,6 +17,12 @@ from enum import Enum
 MAX_CACHE = 8192  # Size of LRU cache for memoization
 DEFAULT_VERSE_LINES = 4  # Number of lines per verse (śloka)
 
+# Scoring weights — used only for internal ranking via MeterScore.score.
+# match_extent is always computed as a normalized 0.0–1.0 fraction and is
+# independent of these weights.
+EXACT_WEIGHT = 1.0
+FUZZY_WEIGHT = 1.0
+
 ###############################################################################
 
 
