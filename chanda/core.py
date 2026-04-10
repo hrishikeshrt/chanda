@@ -1594,10 +1594,9 @@ def analyze_line(
     32
     """
     if data_path is None:
-        from .utils import get_default_data_path
         data_path = get_default_data_path()
 
-    analyzer = Chanda(data_path, language=language)
+    analyzer = _get_analyzer(data_path, language)
     result = analyzer.analyze_line(
         text,
         fuzzy=fuzzy,
@@ -1652,10 +1651,9 @@ def analyze_text(
     ...     print([name for name, _ in line.result.chanda])
     """
     if data_path is None:
-        from .utils import get_default_data_path
         data_path = get_default_data_path()
 
-    analyzer = Chanda(data_path, language=language)
+    analyzer = _get_analyzer(data_path, language)
     results = analyzer.analyze_text(
         text,
         verse=verse_mode,
