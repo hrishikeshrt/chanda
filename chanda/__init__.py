@@ -35,10 +35,11 @@ __author__ = "Hrishikesh Terdalkar"
 
 from .core import Chanda, analyze_line, analyze_text
 from .formatter import format_result, display_fields, format_chanda_list
-from .utils import get_supported_meters
+from .utils import get_supported_meters, get_default_data_path
 from .types import (
     ChandaResult,
     LineResult,
+    MeterScore,
     VerseResult,
     AnalysisResult,
     MeterStats,
@@ -61,6 +62,7 @@ __all__ = [
     # Types
     'ChandaResult',
     'LineResult',
+    'MeterScore',
     'VerseResult',
     'AnalysisResult',
     'MeterStats',
