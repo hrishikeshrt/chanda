@@ -1484,12 +1484,21 @@ class Chanda:
             if not verse_result.get('chanda'):
                 counts['fuzzy_verse'] += 1
                 continue
-            chanda_list, chanda_score = verse_result['chanda']
-            verse_len = len(verse_result.get('line_indices', []))
-            if not verse_len and verse_result.get('line_results'):
-                verse_len = len(verse_result['line_results'])
-            if chanda_score == verse_len:
-                counts['match_verse'] += 1
+            chanda_list, _chanda_score = verse_result['chanda']
+            # A verse is a full match when the winner's match_extent is exactly
+            # 1.0 — every expected pada was covered by exact matches.
+            # MeterScore enforces match_extent in [0.0, 1.0] so == is safe.
+            winner = next(iter(verse_result.get('scores', [])), None)
+            if winner:
+                winner_extent = (
+                    winner.match_extent
+                    if isinstance(winner, MeterScore)
+                    else winner.get('match_extent', 0.0)
+                )
+                if winner_extent == 1.0:
+                    counts['match_verse'] += 1
+                else:
+                    counts['fuzzy_verse'] += 1
             else:
                 counts['fuzzy_verse'] += 1
             verse_statistics['chanda'].update(chanda_list)
@@ -1523,6 +1532,19 @@ class Chanda:
         return _format_summary(result_summary)
 
     ###########################################################################
+
+
+@functools.lru_cache(maxsize=8)
+def _get_analyzer(data_path: str, language: str) -> 'Chanda':
+    """
+    Return a cached ``Chanda`` instance for the given data path and language.
+
+    The cache holds up to 8 distinct (data_path, language) combinations, which
+    covers all practical use cases.  Callers that pass different ``data_path``
+    values will each get their own instance; the common case of repeated calls
+    with the same arguments pays the loading cost only once.
+    """
+    return Chanda(data_path, language=language)
 
 
 def analyze_line(
